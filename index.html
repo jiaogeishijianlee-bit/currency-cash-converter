@@ -34,6 +34,7 @@
         var(--paper);
       font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
       letter-spacing: 0;
+      scroll-behavior: smooth;
     }
 
     main {
@@ -82,8 +83,40 @@
       gap: 16px;
     }
 
+    .main-menu {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      margin-bottom: 16px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 8px 22px rgba(31, 41, 55, 0.08);
+      backdrop-filter: blur(10px);
+    }
+
+    .main-menu a {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      padding: 0 12px;
+      border-radius: 8px;
+      color: var(--accent);
+      background: var(--accent-soft);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
     .panel {
       min-width: 0;
+      scroll-margin-top: 84px;
       padding: 18px;
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -380,8 +413,17 @@
       <div class="formula-pill">货币点位 / (1 + 货币点位) = 现金点位</div>
     </header>
 
+    <nav class="main-menu" aria-label="主菜单">
+      <a href="#money-to-cash">货币转现金</a>
+      <a href="#cash-to-money">现金转货币</a>
+      <a href="#account-simulation">账户币现金模拟</a>
+      <a href="#point-comparison">点位计算模拟</a>
+      <a href="#top-up">一键式补点</a>
+      <a href="#surplus">盈余计算</a>
+    </nav>
+
     <section class="layout" aria-label="货现转换计算器">
-      <article class="panel">
+      <article class="panel" id="money-to-cash">
         <div class="panel-head">
           <h2>货币点位 → 现金点位</h2>
           <span class="badge">M→C</span>
@@ -403,7 +445,7 @@
         <div class="error" id="moneyPointError"></div>
       </article>
 
-      <article class="panel">
+      <article class="panel" id="cash-to-money">
         <div class="panel-head">
           <h2>现金点位 → 货币点位</h2>
           <span class="badge">C→M</span>
@@ -425,7 +467,7 @@
         <div class="error" id="cashPointError"></div>
       </article>
 
-      <article class="panel wide">
+      <article class="panel wide" id="account-simulation">
         <div class="panel-head">
           <h2>账户币 / 现金模拟</h2>
           <div class="segmented" role="group" aria-label="输入模式">
@@ -495,7 +537,7 @@
         </div>
       </article>
 
-      <article class="panel wide">
+      <article class="panel wide" id="point-comparison">
         <div class="panel-head">
           <h2>点位计算模拟</h2>
           <span class="badge">对照</span>
@@ -574,7 +616,7 @@
         <div class="error" id="modeCalcError"></div>
       </article>
 
-      <article class="panel wide">
+      <article class="panel wide" id="top-up">
         <div class="panel-head">
           <h2>一键式补点</h2>
           <span class="badge">补点</span>
@@ -624,7 +666,7 @@
         <div class="error" id="topUpError"></div>
       </article>
 
-      <article class="panel wide">
+      <article class="panel wide" id="surplus">
         <div class="panel-head">
           <h2>盈余计算</h2>
           <span class="badge">盈余</span>
