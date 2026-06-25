@@ -767,6 +767,13 @@
       const modeOneCashPoint = modeOneMoneyPoint / (1 + modeOneMoneyPoint);
       const modeTwoCashPoint = modeTwoMoneyPoint / (1 + modeTwoMoneyPoint);
       const modePointDifference = Math.abs(modeOneMoneyPoint - modeTwoMoneyPoint);
+      const modeCompareLabel = modePointDifference === 0
+        ? "完全一致"
+        : modePointDifference < 0.0001
+          ? "几乎一致"
+          : modePointDifference <= 0.001
+            ? "基本一致"
+            : "不一致";
 
       els.moneyPointError.textContent = "";
       els.cashPointError.textContent = "";
@@ -863,9 +870,7 @@
       els.modePointDifference.textContent = canUseModeCalc ? formatPoint(modePointDifference) : "--";
       els.modeOneCashPoint.textContent = canUseModeCalc ? formatPoint(modeOneCashPoint) : "--";
       els.modeTwoCashPoint.textContent = canUseModeCalc ? formatPoint(modeTwoCashPoint) : "--";
-      els.modeCompareResult.textContent = canUseModeCalc
-        ? modePointDifference < 0.00000001 ? "一致" : "不一致"
-        : "--";
+      els.modeCompareResult.textContent = canUseModeCalc ? modeCompareLabel : "--";
       els.modeStepOne.textContent = canUseModeCalc
         ? `模式一：${formatMoney(modeOneCoins)} / ${formatMoney(modeOneCash)} - 1 = ${formatPoint(modeOneMoneyPoint)}`
         : "--";
