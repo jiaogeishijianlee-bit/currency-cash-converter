@@ -623,6 +623,55 @@
         </div>
         <div class="error" id="topUpError"></div>
       </article>
+
+      <article class="panel wide">
+        <div class="panel-head">
+          <h2>盈余计算</h2>
+          <span class="badge">盈余</span>
+        </div>
+
+        <div class="segmented" role="group" aria-label="盈余计算点位模式">
+          <button type="button" id="surplusMoneyType" class="active">货币点位</button>
+          <button type="button" id="surplusCashType">现金点位</button>
+        </div>
+
+        <div class="simulation-grid">
+          <label>
+            充值账户币
+            <div class="input-row">
+              <input id="surplusCoins" type="number" inputmode="decimal" step="0.01" value="0" min="0">
+              <span class="suffix">币</span>
+            </div>
+          </label>
+          <label>
+            返点点位
+            <div class="input-row">
+              <input id="rebatePoint" type="number" inputmode="decimal" step="0.0001" value="0" min="0">
+              <span class="suffix modeSuffix">%</span>
+            </div>
+          </label>
+          <label>
+            结算点位
+            <div class="input-row">
+              <input id="settlementPoint" type="number" inputmode="decimal" step="0.0001" value="0" min="0">
+              <span class="suffix modeSuffix">%</span>
+            </div>
+          </label>
+        </div>
+
+        <div class="mini-results single">
+          <div class="metric accent">
+            <span>盈余</span>
+            <b id="surplusResult">--</b>
+          </div>
+        </div>
+
+        <div class="chain-formula">
+          <div id="surplusFormula">--</div>
+          <div id="surplusDetail">--</div>
+        </div>
+        <div class="error" id="surplusError"></div>
+      </article>
     </section>
   </main>
 
@@ -630,7 +679,8 @@
     const state = {
       mode: "percent",
       forwardPointType: "money",
-      reversePointType: "money"
+      reversePointType: "money",
+      surplusPointType: "money"
     };
 
     const els = {
@@ -646,12 +696,17 @@
       modeOneCoins: document.querySelector("#modeOneCoins"),
       modeTwoCash: document.querySelector("#modeTwoCash"),
       modeTwoCoins: document.querySelector("#modeTwoCoins"),
+      surplusCoins: document.querySelector("#surplusCoins"),
+      rebatePoint: document.querySelector("#rebatePoint"),
+      settlementPoint: document.querySelector("#settlementPoint"),
       percentMode: document.querySelector("#percentMode"),
       decimalMode: document.querySelector("#decimalMode"),
       forwardMoneyType: document.querySelector("#forwardMoneyType"),
       forwardCashType: document.querySelector("#forwardCashType"),
       reverseMoneyType: document.querySelector("#reverseMoneyType"),
       reverseCashType: document.querySelector("#reverseCashType"),
+      surplusMoneyType: document.querySelector("#surplusMoneyType"),
+      surplusCashType: document.querySelector("#surplusCashType"),
       topUpButton: document.querySelector("#topUpButton"),
       suffixes: document.querySelectorAll(".modeSuffix"),
       cashPointFromMoney: document.querySelector("#cashPointFromMoney"),
@@ -670,6 +725,9 @@
       modeCompareResult: document.querySelector("#modeCompareResult"),
       modeStepOne: document.querySelector("#modeStepOne"),
       modeStepTwo: document.querySelector("#modeStepTwo"),
+      surplusResult: document.querySelector("#surplusResult"),
+      surplusFormula: document.querySelector("#surplusFormula"),
+      surplusDetail: document.querySelector("#surplusDetail"),
       topUpOriginalCashPoint: document.querySelector("#topUpOriginalCashPoint"),
       topUpNewCashPoint: document.querySelector("#topUpNewCashPoint"),
       topUpNewMoneyPoint: document.querySelector("#topUpNewMoneyPoint"),
@@ -681,6 +739,7 @@
       forwardError: document.querySelector("#forwardError"),
       reverseError: document.querySelector("#reverseError"),
       modeCalcError: document.querySelector("#modeCalcError"),
+      surplusError: document.querySelector("#surplusError"),
       topUpError: document.querySelector("#topUpError"),
     };
 
@@ -717,7 +776,7 @@
     function setMode(nextMode) {
       if (state.mode === nextMode) return;
       const multiplier = nextMode === "percent" ? 100 : 0.01;
-      [els.moneyPoint, els.cashPoint, els.forwardPoint, els.reversePoint, els.topUpMoneyPoint, els.topUpPoint].forEach((input) => {
+      [els.moneyPoint, els.cashPoint, els.forwardPoint, els.reversePoint, els.rebatePoint, els.settlementPoint, els.topUpMoneyPoint, els.topUpPoint].forEach((input) => {
         const raw = Number(input.value);
         if (Number.isFinite(raw)) input.value = Number((raw * multiplier).toPrecision(12));
       });
@@ -735,10 +794,14 @@
         state.forwardPointType = type;
         els.forwardMoneyType.classList.toggle("active", type === "money");
         els.forwardCashType.classList.toggle("active", type === "cash");
-      } else {
+      } else if (scope === "reverse") {
         state.reversePointType = type;
         els.reverseMoneyType.classList.toggle("active", type === "money");
         els.reverseCashType.classList.toggle("active", type === "cash");
+      } else {
+        state.surplusPointType = type;
+        els.surplusMoneyType.classList.toggle("active", type === "money");
+        els.surplusCashType.classList.toggle("active", type === "cash");
       }
       calculate();
     }
@@ -756,6 +819,9 @@
       const modeOneCoins = parseAmount(els.modeOneCoins);
       const modeTwoCash = parseAmount(els.modeTwoCash);
       const modeTwoCoins = parseAmount(els.modeTwoCoins);
+      const surplusCoins = parseAmount(els.surplusCoins);
+      const rebatePoint = parsePoint(els.rebatePoint);
+      const settlementPoint = parsePoint(els.settlementPoint);
 
       const convertedCashPoint = moneyPoint / (1 + moneyPoint);
       const convertedMoneyPoint = cashPoint / (1 - cashPoint);
@@ -780,6 +846,7 @@
       els.forwardError.textContent = "";
       els.reverseError.textContent = "";
       els.modeCalcError.textContent = "";
+      els.surplusError.textContent = "";
       els.topUpError.textContent = "";
 
       if (!Number.isFinite(moneyPoint) || moneyPoint < 0) {
@@ -878,6 +945,46 @@
         ? `模式二：${formatMoney(modeTwoCoins)} / ${formatMoney(modeTwoCash)} - 1 = ${formatPoint(modeTwoMoneyPoint)}`
         : "--";
 
+      const canUseSurplusCoins = Number.isFinite(surplusCoins) && surplusCoins >= 0;
+      const canUseSurplusMoneyPoints = state.surplusPointType === "money"
+        && Number.isFinite(rebatePoint)
+        && rebatePoint >= 0
+        && Number.isFinite(settlementPoint)
+        && settlementPoint >= 0;
+      const canUseSurplusCashPoints = state.surplusPointType === "cash"
+        && Number.isFinite(rebatePoint)
+        && rebatePoint >= 0
+        && rebatePoint < 1
+        && Number.isFinite(settlementPoint)
+        && settlementPoint >= 0
+        && settlementPoint < 1;
+      const canUseSurplus = canUseSurplusCoins && (canUseSurplusMoneyPoints || canUseSurplusCashPoints);
+      const surplusRebateCash = state.surplusPointType === "money"
+        ? surplusCoins / (1 + rebatePoint)
+        : surplusCoins * (1 - rebatePoint);
+      const surplusSettlementCash = state.surplusPointType === "money"
+        ? surplusCoins / (1 + settlementPoint)
+        : surplusCoins * (1 - settlementPoint);
+      const surplusResult = surplusRebateCash - surplusSettlementCash;
+
+      if (!canUseSurplusCoins) {
+        els.surplusError.textContent = "充值账户币需输入 0 或正数。";
+      } else if (state.surplusPointType === "money" && (!Number.isFinite(rebatePoint) || rebatePoint < 0 || !Number.isFinite(settlementPoint) || settlementPoint < 0)) {
+        els.surplusError.textContent = "返点点位和结算点位需输入 0 或正数。";
+      } else if (state.surplusPointType === "cash" && (!Number.isFinite(rebatePoint) || rebatePoint < 0 || rebatePoint >= 1 || !Number.isFinite(settlementPoint) || settlementPoint < 0 || settlementPoint >= 1)) {
+        els.surplusError.textContent = "现金点位必须大于等于 0 且小于 100%（小数模式小于 1）。";
+      }
+
+      els.surplusResult.textContent = canUseSurplus ? formatMoney(surplusResult) : "--";
+      els.surplusFormula.textContent = canUseSurplus
+        ? state.surplusPointType === "money"
+          ? `${formatMoney(surplusCoins)} / (1 + ${formatPoint(rebatePoint)}) - ${formatMoney(surplusCoins)} / (1 + ${formatPoint(settlementPoint)}) = ${formatMoney(surplusResult)}`
+          : `${formatMoney(surplusCoins)} × (1 - ${formatPoint(rebatePoint)}) - ${formatMoney(surplusCoins)} × (1 - ${formatPoint(settlementPoint)}) = ${formatMoney(surplusResult)}`
+        : "--";
+      els.surplusDetail.textContent = canUseSurplus
+        ? `${formatMoney(surplusRebateCash)} - ${formatMoney(surplusSettlementCash)} = ${formatMoney(surplusResult)}`
+        : "--";
+
       const canUseTopUp = Number.isFinite(topUpMoneyPoint)
         && topUpMoneyPoint >= 0
         && Number.isFinite(topUpPoint)
@@ -899,7 +1006,7 @@
 
     }
 
-    [els.moneyPoint, els.cashPoint, els.forwardPoint, els.reversePoint, els.topUpMoneyPoint, els.topUpPoint, els.accountCoins, els.targetCash, els.modeOneCash, els.modeOneCoins, els.modeTwoCash, els.modeTwoCoins].forEach((input) => {
+    [els.moneyPoint, els.cashPoint, els.forwardPoint, els.reversePoint, els.rebatePoint, els.settlementPoint, els.topUpMoneyPoint, els.topUpPoint, els.accountCoins, els.targetCash, els.modeOneCash, els.modeOneCoins, els.modeTwoCash, els.modeTwoCoins, els.surplusCoins].forEach((input) => {
       input.addEventListener("input", calculate);
     });
     els.topUpButton.addEventListener("click", calculate);
@@ -909,6 +1016,8 @@
     els.forwardCashType.addEventListener("click", () => setPointType("forward", "cash"));
     els.reverseMoneyType.addEventListener("click", () => setPointType("reverse", "money"));
     els.reverseCashType.addEventListener("click", () => setPointType("reverse", "cash"));
+    els.surplusMoneyType.addEventListener("click", () => setPointType("surplus", "money"));
+    els.surplusCashType.addEventListener("click", () => setPointType("surplus", "cash"));
 
     calculate();
   </script>
