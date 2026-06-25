@@ -497,6 +497,85 @@
 
       <article class="panel wide">
         <div class="panel-head">
+          <h2>点位计算模拟</h2>
+          <span class="badge">对照</span>
+        </div>
+
+        <div class="simulation-grid">
+          <div>
+            <label>
+              模式一打款现金
+              <div class="input-row">
+                <input id="modeOneCash" type="number" inputmode="decimal" step="0.01" value="8000" min="0">
+                <span class="suffix">现金</span>
+              </div>
+            </label>
+            <label>
+              模式一到账账户币
+              <div class="input-row">
+                <input id="modeOneCoins" type="number" inputmode="decimal" step="0.01" value="10000" min="0">
+                <span class="suffix">币</span>
+              </div>
+            </label>
+          </div>
+
+          <div>
+            <label>
+              模式二打款现金
+              <div class="input-row">
+                <input id="modeTwoCash" type="number" inputmode="decimal" step="0.01" value="10000" min="0">
+                <span class="suffix">现金</span>
+              </div>
+            </label>
+            <label>
+              模式二到账账户币
+              <div class="input-row">
+                <input id="modeTwoCoins" type="number" inputmode="decimal" step="0.01" value="12500" min="0">
+                <span class="suffix">币</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="mini-results">
+          <div class="metric">
+            <span>模式一实际货币点位</span>
+            <b id="modeOneMoneyPoint">--</b>
+          </div>
+          <div class="metric">
+            <span>模式二实际货币点位</span>
+            <b id="modeTwoMoneyPoint">--</b>
+          </div>
+          <div class="metric accent">
+            <span>点位差值</span>
+            <b id="modePointDifference">--</b>
+          </div>
+        </div>
+
+        <div class="mini-results">
+          <div class="metric">
+            <span>模式一对应现金点位</span>
+            <b id="modeOneCashPoint">--</b>
+          </div>
+          <div class="metric">
+            <span>模式二对应现金点位</span>
+            <b id="modeTwoCashPoint">--</b>
+          </div>
+          <div class="metric accent">
+            <span>对照结果</span>
+            <b id="modeCompareResult">--</b>
+          </div>
+        </div>
+
+        <div class="chain-formula">
+          <div id="modeStepOne">--</div>
+          <div id="modeStepTwo">--</div>
+        </div>
+        <div class="error" id="modeCalcError"></div>
+      </article>
+
+      <article class="panel wide">
+        <div class="panel-head">
           <h2>一键式补点</h2>
           <span class="badge">补点</span>
         </div>
@@ -563,6 +642,10 @@
       forwardPoint: document.querySelector("#forwardPoint"),
       targetCash: document.querySelector("#targetCash"),
       reversePoint: document.querySelector("#reversePoint"),
+      modeOneCash: document.querySelector("#modeOneCash"),
+      modeOneCoins: document.querySelector("#modeOneCoins"),
+      modeTwoCash: document.querySelector("#modeTwoCash"),
+      modeTwoCoins: document.querySelector("#modeTwoCoins"),
       percentMode: document.querySelector("#percentMode"),
       decimalMode: document.querySelector("#decimalMode"),
       forwardMoneyType: document.querySelector("#forwardMoneyType"),
@@ -579,6 +662,14 @@
       cashResultFormula: document.querySelector("#cashResultFormula"),
       coinsResult: document.querySelector("#coinsResult"),
       coinsResultFormula: document.querySelector("#coinsResultFormula"),
+      modeOneMoneyPoint: document.querySelector("#modeOneMoneyPoint"),
+      modeTwoMoneyPoint: document.querySelector("#modeTwoMoneyPoint"),
+      modePointDifference: document.querySelector("#modePointDifference"),
+      modeOneCashPoint: document.querySelector("#modeOneCashPoint"),
+      modeTwoCashPoint: document.querySelector("#modeTwoCashPoint"),
+      modeCompareResult: document.querySelector("#modeCompareResult"),
+      modeStepOne: document.querySelector("#modeStepOne"),
+      modeStepTwo: document.querySelector("#modeStepTwo"),
       topUpOriginalCashPoint: document.querySelector("#topUpOriginalCashPoint"),
       topUpNewCashPoint: document.querySelector("#topUpNewCashPoint"),
       topUpNewMoneyPoint: document.querySelector("#topUpNewMoneyPoint"),
@@ -589,6 +680,7 @@
       cashPointError: document.querySelector("#cashPointError"),
       forwardError: document.querySelector("#forwardError"),
       reverseError: document.querySelector("#reverseError"),
+      modeCalcError: document.querySelector("#modeCalcError"),
       topUpError: document.querySelector("#topUpError"),
     };
 
@@ -660,17 +752,27 @@
       const topUpPoint = parsePoint(els.topUpPoint);
       const accountCoins = parseAmount(els.accountCoins);
       const targetCash = parseAmount(els.targetCash);
+      const modeOneCash = parseAmount(els.modeOneCash);
+      const modeOneCoins = parseAmount(els.modeOneCoins);
+      const modeTwoCash = parseAmount(els.modeTwoCash);
+      const modeTwoCoins = parseAmount(els.modeTwoCoins);
 
       const convertedCashPoint = moneyPoint / (1 + moneyPoint);
       const convertedMoneyPoint = cashPoint / (1 - cashPoint);
       const topUpOriginalCashPoint = topUpMoneyPoint / (1 + topUpMoneyPoint);
       const topUpNewCashPoint = topUpOriginalCashPoint + topUpPoint;
       const topUpNewMoneyPoint = topUpNewCashPoint / (1 - topUpNewCashPoint);
+      const modeOneMoneyPoint = modeOneCoins / modeOneCash - 1;
+      const modeTwoMoneyPoint = modeTwoCoins / modeTwoCash - 1;
+      const modeOneCashPoint = modeOneMoneyPoint / (1 + modeOneMoneyPoint);
+      const modeTwoCashPoint = modeTwoMoneyPoint / (1 + modeTwoMoneyPoint);
+      const modePointDifference = Math.abs(modeOneMoneyPoint - modeTwoMoneyPoint);
 
       els.moneyPointError.textContent = "";
       els.cashPointError.textContent = "";
       els.forwardError.textContent = "";
       els.reverseError.textContent = "";
+      els.modeCalcError.textContent = "";
       els.topUpError.textContent = "";
 
       if (!Number.isFinite(moneyPoint) || moneyPoint < 0) {
@@ -743,6 +845,34 @@
           : `${formatMoney(targetCash)} / (1 - ${formatPoint(reversePoint)}) = ${formatMoney(coinsResult)}`
         : "--";
 
+      const canUseModeCalc = Number.isFinite(modeOneCash)
+        && modeOneCash > 0
+        && Number.isFinite(modeOneCoins)
+        && modeOneCoins > 0
+        && Number.isFinite(modeTwoCash)
+        && modeTwoCash > 0
+        && Number.isFinite(modeTwoCoins)
+        && modeTwoCoins > 0;
+
+      if (!canUseModeCalc) {
+        els.modeCalcError.textContent = "两种模式的打款现金和到账账户币都必须大于 0。";
+      }
+
+      els.modeOneMoneyPoint.textContent = canUseModeCalc ? formatPoint(modeOneMoneyPoint) : "--";
+      els.modeTwoMoneyPoint.textContent = canUseModeCalc ? formatPoint(modeTwoMoneyPoint) : "--";
+      els.modePointDifference.textContent = canUseModeCalc ? formatPoint(modePointDifference) : "--";
+      els.modeOneCashPoint.textContent = canUseModeCalc ? formatPoint(modeOneCashPoint) : "--";
+      els.modeTwoCashPoint.textContent = canUseModeCalc ? formatPoint(modeTwoCashPoint) : "--";
+      els.modeCompareResult.textContent = canUseModeCalc
+        ? modePointDifference < 0.00000001 ? "一致" : "不一致"
+        : "--";
+      els.modeStepOne.textContent = canUseModeCalc
+        ? `模式一：${formatMoney(modeOneCoins)} / ${formatMoney(modeOneCash)} - 1 = ${formatPoint(modeOneMoneyPoint)}`
+        : "--";
+      els.modeStepTwo.textContent = canUseModeCalc
+        ? `模式二：${formatMoney(modeTwoCoins)} / ${formatMoney(modeTwoCash)} - 1 = ${formatPoint(modeTwoMoneyPoint)}`
+        : "--";
+
       const canUseTopUp = Number.isFinite(topUpMoneyPoint)
         && topUpMoneyPoint >= 0
         && Number.isFinite(topUpPoint)
@@ -764,7 +894,7 @@
 
     }
 
-    [els.moneyPoint, els.cashPoint, els.forwardPoint, els.reversePoint, els.topUpMoneyPoint, els.topUpPoint, els.accountCoins, els.targetCash].forEach((input) => {
+    [els.moneyPoint, els.cashPoint, els.forwardPoint, els.reversePoint, els.topUpMoneyPoint, els.topUpPoint, els.accountCoins, els.targetCash, els.modeOneCash, els.modeOneCoins, els.modeTwoCash, els.modeTwoCoins].forEach((input) => {
       input.addEventListener("input", calculate);
     });
     els.topUpButton.addEventListener("click", calculate);
