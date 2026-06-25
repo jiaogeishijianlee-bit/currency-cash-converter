@@ -233,11 +233,22 @@
       gap: 14px;
     }
 
+    .simulation-grid > div {
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+
     .mini-results {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
       margin-top: 14px;
+    }
+
+    .mini-results.single {
+      grid-template-columns: 1fr;
+      margin-top: 0;
     }
 
     .metric {
@@ -416,6 +427,76 @@
 
       <article class="panel wide">
         <div class="panel-head">
+          <h2>账户币 / 现金模拟</h2>
+          <div class="segmented" role="group" aria-label="输入模式">
+            <button type="button" id="percentMode" class="active">百分比</button>
+            <button type="button" id="decimalMode">小数</button>
+          </div>
+        </div>
+
+        <div class="simulation-grid">
+          <div>
+            <div class="segmented" role="group" aria-label="账户币算现金点位类型">
+              <button type="button" id="forwardMoneyType" class="active">货币点位</button>
+              <button type="button" id="forwardCashType">现金点位</button>
+            </div>
+            <label>
+              输入账户币
+              <div class="input-row">
+                <input id="accountCoins" type="number" inputmode="decimal" step="0.01" value="10000" min="0">
+                <span class="suffix">币</span>
+              </div>
+            </label>
+            <label>
+              输入点位
+              <div class="input-row">
+                <input id="forwardPoint" type="number" inputmode="decimal" step="0.0001" value="25" min="0">
+                <span class="suffix modeSuffix">%</span>
+              </div>
+            </label>
+            <div class="mini-results single">
+              <div class="metric accent">
+                <span>得到现金</span>
+                <b id="cashResult">--</b>
+              </div>
+            </div>
+            <div class="formula" id="cashResultFormula">--</div>
+            <div class="error" id="forwardError"></div>
+          </div>
+
+          <div>
+            <div class="segmented" role="group" aria-label="现金反推账户币点位类型">
+              <button type="button" id="reverseMoneyType" class="active">货币点位</button>
+              <button type="button" id="reverseCashType">现金点位</button>
+            </div>
+            <label>
+              输入现金
+              <div class="input-row">
+                <input id="targetCash" type="number" inputmode="decimal" step="0.01" value="8000" min="0">
+                <span class="suffix">现金</span>
+              </div>
+            </label>
+            <label>
+              输入点位
+              <div class="input-row">
+                <input id="reversePoint" type="number" inputmode="decimal" step="0.0001" value="25" min="0">
+                <span class="suffix modeSuffix">%</span>
+              </div>
+            </label>
+            <div class="mini-results single">
+              <div class="metric accent">
+                <span>得到账户币</span>
+                <b id="coinsResult">--</b>
+              </div>
+            </div>
+            <div class="formula" id="coinsResultFormula">--</div>
+            <div class="error" id="reverseError"></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel wide">
+        <div class="panel-head">
           <h2>一键式补点</h2>
           <span class="badge">补点</span>
         </div>
@@ -463,74 +544,14 @@
         </div>
         <div class="error" id="topUpError"></div>
       </article>
-
-      <article class="panel wide">
-        <div class="panel-head">
-          <h2>账户币 / 现金模拟</h2>
-          <div class="segmented" role="group" aria-label="输入模式">
-            <button type="button" id="percentMode" class="active">百分比</button>
-            <button type="button" id="decimalMode">小数</button>
-          </div>
-        </div>
-
-        <div class="simulation-grid">
-          <div>
-            <label>
-              输入账户币
-              <div class="input-row">
-                <input id="accountCoins" type="number" inputmode="decimal" step="0.01" value="10000" min="0">
-                <span class="suffix">币</span>
-              </div>
-            </label>
-            <div class="mini-results">
-              <div class="metric">
-                <span>账户币 / (1 + 货币点位)</span>
-                <b id="cashByMoneyPoint">--</b>
-              </div>
-              <div class="metric">
-                <span>账户币 × (1 - 现金点位)</span>
-                <b id="cashByCashPoint">--</b>
-              </div>
-              <div class="metric warning">
-                <span>两种现金差值</span>
-                <b id="cashDifference">--</b>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label>
-              输入目标现金
-              <div class="input-row">
-                <input id="targetCash" type="number" inputmode="decimal" step="0.01" value="8000" min="0">
-                <span class="suffix">现金</span>
-              </div>
-            </label>
-            <div class="mini-results">
-              <div class="metric">
-                <span>现金 × (1 + 货币点位)</span>
-                <b id="coinsByMoneyPoint">--</b>
-              </div>
-              <div class="metric">
-                <span>现金 / (1 - 现金点位)</span>
-                <b id="coinsByCashPoint">--</b>
-              </div>
-              <div class="metric warning">
-                <span>两种账户币差值</span>
-                <b id="coinDifference">--</b>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <p class="note" id="consistencyNote">--</p>
-      </article>
     </section>
   </main>
 
   <script>
     const state = {
-      mode: "percent"
+      mode: "percent",
+      forwardPointType: "money",
+      reversePointType: "money"
     };
 
     const els = {
@@ -539,21 +560,25 @@
       topUpMoneyPoint: document.querySelector("#topUpMoneyPoint"),
       topUpPoint: document.querySelector("#topUpPoint"),
       accountCoins: document.querySelector("#accountCoins"),
+      forwardPoint: document.querySelector("#forwardPoint"),
       targetCash: document.querySelector("#targetCash"),
+      reversePoint: document.querySelector("#reversePoint"),
       percentMode: document.querySelector("#percentMode"),
       decimalMode: document.querySelector("#decimalMode"),
+      forwardMoneyType: document.querySelector("#forwardMoneyType"),
+      forwardCashType: document.querySelector("#forwardCashType"),
+      reverseMoneyType: document.querySelector("#reverseMoneyType"),
+      reverseCashType: document.querySelector("#reverseCashType"),
       topUpButton: document.querySelector("#topUpButton"),
       suffixes: document.querySelectorAll(".modeSuffix"),
       cashPointFromMoney: document.querySelector("#cashPointFromMoney"),
       moneyPointFromCash: document.querySelector("#moneyPointFromCash"),
       moneyToCashFormula: document.querySelector("#moneyToCashFormula"),
       cashToMoneyFormula: document.querySelector("#cashToMoneyFormula"),
-      cashByMoneyPoint: document.querySelector("#cashByMoneyPoint"),
-      cashByCashPoint: document.querySelector("#cashByCashPoint"),
-      cashDifference: document.querySelector("#cashDifference"),
-      coinsByMoneyPoint: document.querySelector("#coinsByMoneyPoint"),
-      coinsByCashPoint: document.querySelector("#coinsByCashPoint"),
-      coinDifference: document.querySelector("#coinDifference"),
+      cashResult: document.querySelector("#cashResult"),
+      cashResultFormula: document.querySelector("#cashResultFormula"),
+      coinsResult: document.querySelector("#coinsResult"),
+      coinsResultFormula: document.querySelector("#coinsResultFormula"),
       topUpOriginalCashPoint: document.querySelector("#topUpOriginalCashPoint"),
       topUpNewCashPoint: document.querySelector("#topUpNewCashPoint"),
       topUpNewMoneyPoint: document.querySelector("#topUpNewMoneyPoint"),
@@ -562,8 +587,9 @@
       topUpStepThree: document.querySelector("#topUpStepThree"),
       moneyPointError: document.querySelector("#moneyPointError"),
       cashPointError: document.querySelector("#cashPointError"),
+      forwardError: document.querySelector("#forwardError"),
+      reverseError: document.querySelector("#reverseError"),
       topUpError: document.querySelector("#topUpError"),
-      consistencyNote: document.querySelector("#consistencyNote")
     };
 
     function parsePoint(input) {
@@ -599,7 +625,7 @@
     function setMode(nextMode) {
       if (state.mode === nextMode) return;
       const multiplier = nextMode === "percent" ? 100 : 0.01;
-      [els.moneyPoint, els.cashPoint, els.topUpMoneyPoint, els.topUpPoint].forEach((input) => {
+      [els.moneyPoint, els.cashPoint, els.forwardPoint, els.reversePoint, els.topUpMoneyPoint, els.topUpPoint].forEach((input) => {
         const raw = Number(input.value);
         if (Number.isFinite(raw)) input.value = Number((raw * multiplier).toPrecision(12));
       });
@@ -612,9 +638,24 @@
       calculate();
     }
 
+    function setPointType(scope, type) {
+      if (scope === "forward") {
+        state.forwardPointType = type;
+        els.forwardMoneyType.classList.toggle("active", type === "money");
+        els.forwardCashType.classList.toggle("active", type === "cash");
+      } else {
+        state.reversePointType = type;
+        els.reverseMoneyType.classList.toggle("active", type === "money");
+        els.reverseCashType.classList.toggle("active", type === "cash");
+      }
+      calculate();
+    }
+
     function calculate() {
       const moneyPoint = parsePoint(els.moneyPoint);
       const cashPoint = parsePoint(els.cashPoint);
+      const forwardPoint = parsePoint(els.forwardPoint);
+      const reversePoint = parsePoint(els.reversePoint);
       const topUpMoneyPoint = parsePoint(els.topUpMoneyPoint);
       const topUpPoint = parsePoint(els.topUpPoint);
       const accountCoins = parseAmount(els.accountCoins);
@@ -628,6 +669,8 @@
 
       els.moneyPointError.textContent = "";
       els.cashPointError.textContent = "";
+      els.forwardError.textContent = "";
+      els.reverseError.textContent = "";
       els.topUpError.textContent = "";
 
       if (!Number.isFinite(moneyPoint) || moneyPoint < 0) {
@@ -654,6 +697,52 @@
         ? `${formatPoint(cashPoint)} / (1 - ${formatPoint(cashPoint)}) = ${formatPoint(convertedMoneyPoint)}`
         : "--";
 
+      const canUseCoins = Number.isFinite(accountCoins) && accountCoins >= 0;
+      const canUseForwardMoneyPoint = state.forwardPointType === "money" && Number.isFinite(forwardPoint) && forwardPoint >= 0;
+      const canUseForwardCashPoint = state.forwardPointType === "cash" && Number.isFinite(forwardPoint) && forwardPoint >= 0 && forwardPoint < 1;
+      const canUseForward = canUseCoins && (canUseForwardMoneyPoint || canUseForwardCashPoint);
+      const cashResult = state.forwardPointType === "money"
+        ? accountCoins / (1 + forwardPoint)
+        : accountCoins * (1 - forwardPoint);
+
+      if (!Number.isFinite(accountCoins) || accountCoins < 0) {
+        els.forwardError.textContent = "账户币需输入 0 或正数。";
+      } else if (state.forwardPointType === "money" && (!Number.isFinite(forwardPoint) || forwardPoint < 0)) {
+        els.forwardError.textContent = "货币点位需输入 0 或正数。";
+      } else if (state.forwardPointType === "cash" && (!Number.isFinite(forwardPoint) || forwardPoint < 0 || forwardPoint >= 1)) {
+        els.forwardError.textContent = "现金点位必须大于等于 0 且小于 100%（小数模式小于 1）。";
+      }
+
+      els.cashResult.textContent = canUseForward ? formatMoney(cashResult) : "--";
+      els.cashResultFormula.textContent = canUseForward
+        ? state.forwardPointType === "money"
+          ? `${formatMoney(accountCoins)} / (1 + ${formatPoint(forwardPoint)}) = ${formatMoney(cashResult)}`
+          : `${formatMoney(accountCoins)} × (1 - ${formatPoint(forwardPoint)}) = ${formatMoney(cashResult)}`
+        : "--";
+
+      const canUseCash = Number.isFinite(targetCash) && targetCash >= 0;
+      const canUseReverseMoneyPoint = state.reversePointType === "money" && Number.isFinite(reversePoint) && reversePoint >= 0;
+      const canUseReverseCashPoint = state.reversePointType === "cash" && Number.isFinite(reversePoint) && reversePoint >= 0 && reversePoint < 1;
+      const canUseReverse = canUseCash && (canUseReverseMoneyPoint || canUseReverseCashPoint);
+      const coinsResult = state.reversePointType === "money"
+        ? targetCash * (1 + reversePoint)
+        : targetCash / (1 - reversePoint);
+
+      if (!Number.isFinite(targetCash) || targetCash < 0) {
+        els.reverseError.textContent = "现金需输入 0 或正数。";
+      } else if (state.reversePointType === "money" && (!Number.isFinite(reversePoint) || reversePoint < 0)) {
+        els.reverseError.textContent = "货币点位需输入 0 或正数。";
+      } else if (state.reversePointType === "cash" && (!Number.isFinite(reversePoint) || reversePoint < 0 || reversePoint >= 1)) {
+        els.reverseError.textContent = "现金点位必须大于等于 0 且小于 100%（小数模式小于 1）。";
+      }
+
+      els.coinsResult.textContent = canUseReverse ? formatMoney(coinsResult) : "--";
+      els.coinsResultFormula.textContent = canUseReverse
+        ? state.reversePointType === "money"
+          ? `${formatMoney(targetCash)} × (1 + ${formatPoint(reversePoint)}) = ${formatMoney(coinsResult)}`
+          : `${formatMoney(targetCash)} / (1 - ${formatPoint(reversePoint)}) = ${formatMoney(coinsResult)}`
+        : "--";
+
       const canUseTopUp = Number.isFinite(topUpMoneyPoint)
         && topUpMoneyPoint >= 0
         && Number.isFinite(topUpPoint)
@@ -673,40 +762,18 @@
         ? `3. ${formatPoint(topUpNewCashPoint)} / (1 - ${formatPoint(topUpNewCashPoint)}) = ${formatPoint(topUpNewMoneyPoint)}`
         : "--";
 
-      const canUseMoneyPoint = Number.isFinite(moneyPoint) && moneyPoint >= 0;
-      const canUseCashPoint = Number.isFinite(cashPoint) && cashPoint >= 0 && cashPoint < 1;
-      const canUseCoins = Number.isFinite(accountCoins) && accountCoins >= 0;
-      const canUseCash = Number.isFinite(targetCash) && targetCash >= 0;
-
-      const cashByMoneyPoint = canUseMoneyPoint && canUseCoins ? accountCoins / (1 + moneyPoint) : NaN;
-      const cashByCashPoint = canUseCashPoint && canUseCoins ? accountCoins * (1 - cashPoint) : NaN;
-      const coinsByMoneyPoint = canUseMoneyPoint && canUseCash ? targetCash * (1 + moneyPoint) : NaN;
-      const coinsByCashPoint = canUseCashPoint && canUseCash ? targetCash / (1 - cashPoint) : NaN;
-
-      els.cashByMoneyPoint.textContent = formatMoney(cashByMoneyPoint);
-      els.cashByCashPoint.textContent = formatMoney(cashByCashPoint);
-      els.cashDifference.textContent = formatMoney(Math.abs(cashByMoneyPoint - cashByCashPoint));
-      els.coinsByMoneyPoint.textContent = formatMoney(coinsByMoneyPoint);
-      els.coinsByCashPoint.textContent = formatMoney(coinsByCashPoint);
-      els.coinDifference.textContent = formatMoney(Math.abs(coinsByMoneyPoint - coinsByCashPoint));
-
-      const syncedCashPoint = canUseMoneyPoint ? convertedCashPoint : NaN;
-      const mismatch = canUseCashPoint && canUseMoneyPoint ? Math.abs(cashPoint - syncedCashPoint) : NaN;
-      if (Number.isFinite(mismatch) && mismatch < 0.00000001) {
-        els.consistencyNote.textContent = "当前输入的货币点位与现金点位互相匹配。账户币 / (1 + 货币点位) 与账户币 × (1 - 现金点位) 会得到同一现金结果。";
-      } else if (Number.isFinite(mismatch)) {
-        els.consistencyNote.textContent = `当前货币点位换算出的现金点位是 ${formatPoint(syncedCashPoint)}，与你输入的现金点位 ${formatPoint(cashPoint)} 不一致；模拟区会按各自输入分别计算。`;
-      } else {
-        els.consistencyNote.textContent = "请输入有效点位后，系统会自动检查两种点位是否匹配。";
-      }
     }
 
-    [els.moneyPoint, els.cashPoint, els.topUpMoneyPoint, els.topUpPoint, els.accountCoins, els.targetCash].forEach((input) => {
+    [els.moneyPoint, els.cashPoint, els.forwardPoint, els.reversePoint, els.topUpMoneyPoint, els.topUpPoint, els.accountCoins, els.targetCash].forEach((input) => {
       input.addEventListener("input", calculate);
     });
     els.topUpButton.addEventListener("click", calculate);
     els.percentMode.addEventListener("click", () => setMode("percent"));
     els.decimalMode.addEventListener("click", () => setMode("decimal"));
+    els.forwardMoneyType.addEventListener("click", () => setPointType("forward", "money"));
+    els.forwardCashType.addEventListener("click", () => setPointType("forward", "cash"));
+    els.reverseMoneyType.addEventListener("click", () => setPointType("reverse", "money"));
+    els.reverseCashType.addEventListener("click", () => setPointType("reverse", "cash"));
 
     calculate();
   </script>
